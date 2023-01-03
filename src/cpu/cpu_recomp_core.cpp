@@ -50,7 +50,7 @@ void* CPURecompiler::AllocBlock(uint32_t size)
 			b->size = size;
 			b->magic = MEMBLOCK_MAGIC;
 
-			return (void*)(b + sizeof(MemBlock));
+			return (void*)(((uint8_t*)b) + sizeof(MemBlock));
 		}
 	}
 
@@ -120,6 +120,8 @@ CPURecompiler::CPURecompiler()
 	block->size = 0xffffffff - sizeof(MemBlock);
 
 	cur_size = 25;
+
+	Bus::recomp = this;
 }
 
 CPURecompiler::~CPURecompiler()
@@ -238,7 +240,7 @@ void CPURecompiler::EmitJAL(Xbyak::CodeGenerator &cg)
 
 void CPURecompiler::EmitBEQ(Xbyak::CodeGenerator &cg)
 {
-	printf("bne %s, %s, 0x%08x\n", GetRegName(cur_instr.i_type.rt),  GetRegName(cur_instr.i_type.rs), (g_state.next_pc + (int32_t)(cur_instr.i_type.imm << 2)));
+	printf("beq %s, %s, 0x%08x\n", GetRegName(cur_instr.i_type.rt),  GetRegName(cur_instr.i_type.rs), (g_state.next_pc + (int32_t)(cur_instr.i_type.imm << 2)));
 
 	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, regs) + (cur_instr.i_type.rs * sizeof(uint32_t))]);
 	cg.mov(cg.ebx, cg.dword[cg.rax]);
@@ -253,6 +255,7 @@ void CPURecompiler::EmitBEQ(Xbyak::CodeGenerator &cg)
 	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, pc)]);
 	cg.mov(cg.ebx, cg.dword[cg.rax]);
 	cg.add(cg.ebx, (int32_t)(int16_t)(cur_instr.i_type.imm << 2));
+	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, next_pc)]);
 	cg.mov(cg.dword[cg.rax], cg.ebx);
 
 	cg.L(not_equal);
@@ -275,6 +278,7 @@ void CPURecompiler::EmitBNE(Xbyak::CodeGenerator &cg)
 	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, pc)]);
 	cg.mov(cg.ebx, cg.dword[cg.rax]);
 	cg.add(cg.ebx, (int32_t)(int16_t)(cur_instr.i_type.imm << 2));
+	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, next_pc)]);
 	cg.mov(cg.dword[cg.rax], cg.ebx);
 
 	cg.L(equal);
@@ -477,6 +481,21 @@ void CPURecompiler::EmitADDU(Xbyak::CodeGenerator &cg)
 	cg.mov(cg.dword[cg.rax], cg.ebx);
 }
 
+void CPURecompiler::EmitAnd(Xbyak::CodeGenerator &cg)
+{
+	printf("and %s, %s, %s\n", GetRegName(cur_instr.r_type.rd), GetRegName(cur_instr.r_type.rt), GetRegName(cur_instr.r_type.rs));
+
+	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, regs) + (cur_instr.r_type.rs * 4)]);
+	cg.mov(cg.ebx, cg.dword[cg.rax]);
+	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, regs) + (cur_instr.r_type.rt * 4)]);
+	cg.mov(cg.ecx, cg.dword[cg.rax]);
+	
+	cg.and_(cg.ebx, cg.ecx);
+	
+	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, regs) + (cur_instr.r_type.rd * 4)]);
+	cg.mov(cg.dword[cg.rax], cg.ebx);
+}
+
 void CPURecompiler::EmitOr(Xbyak::CodeGenerator &cg)
 {
 	printf("or %s, %s, %s\n", GetRegName(cur_instr.r_type.rd), GetRegName(cur_instr.r_type.rt), GetRegName(cur_instr.r_type.rs));
@@ -515,6 +534,16 @@ void CPURecompiler::EmitSLTU(Xbyak::CodeGenerator &cg)
 	cg.L(end);
 }
 
+void CPURecompiler::EmitMFC0(Xbyak::CodeGenerator &cg)
+{
+	printf("mfc0 r%d, %s\n", cur_instr.r_type.rd, GetRegName(cur_instr.r_type.rt));
+
+	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, cop0) + (cur_instr.r_type.rd * 4)]);
+	cg.mov(cg.ebx, cg.dword[cg.rax]);
+	cg.lea(cg.rax, cg.ptr[cg.rbp + offsetof(CPUState, regs) + (cur_instr.r_type.rt * 4)]);
+	cg.mov(cg.dword[cg.rax], cg.ebx);
+}
+
 void CPURecompiler::EmitMTC0(Xbyak::CodeGenerator &cg)
 {
 	printf("mtc0 r%d, %s\n", cur_instr.r_type.rd, GetRegName(cur_instr.r_type.rt));
@@ -531,24 +560,27 @@ HostFunc CPURecompiler::CompileBlock()
 
 	CheckCacheFull();
 
-	for (auto b : blockCache)
-	{
-		if (b->guest_addr == g_state.pc)
-		{
-			b->hits++;
-			return b->entry;
-		}
-	}
+	// for (auto b : blockCache)
+	// {
+	// 	if (b->guest_addr == g_state.pc)
+	// 	{
+	// 		b->hits++;
+	// 		return b->entry;
+	// 	}
+	// }
 
 	void* buffer = AllocBlock(cur_size);
-	Xbyak::CodeGenerator cg(cur_size, buffer);
 
 	CodeBlock* block = new CodeBlock;
 	block->entry = (HostFunc)buffer;
 	block->Start = (uint8_t*)buffer;
 	block->guest_addr = g_state.pc;
+	block->size = instructions * 4;
+	instructions = 0;
 
 	blockCache.push_back(block);
+	
+	Xbyak::CodeGenerator cg(cur_size, buffer);
 
 	EmitPrequel(cg);
 
@@ -576,6 +608,9 @@ HostFunc CPURecompiler::CompileBlock()
 					break;
 				case SpecialInstructions::addu:
 					EmitADDU(cg);
+					break;
+				case SpecialInstructions::and_:
+					EmitAnd(cg);
 					break;
 				case SpecialInstructions::or_:
 					EmitOr(cg);
@@ -618,6 +653,9 @@ HostFunc CPURecompiler::CompileBlock()
 			{
 				switch (cur_instr.r_type.rs)
 				{
+				case Cop0Instructions::mfc0:
+					EmitMFC0(cg);
+					break;
 				case Cop0Instructions::mtc0:
 					EmitMTC0(cg);
 					break;
@@ -653,17 +691,41 @@ HostFunc CPURecompiler::CompileBlock()
 
 	EmitSequel(cg);
 
-	std::ofstream file("out.bin");
+	// static int num_bins = 0;
+	// printf("%d\n", num_bins);
+	// std::string fname = "blocks/out" + std::to_string(num_bins++) + ".bin";
 
-	for (int i = 0; i < cur_size; i++)
-	{
-		file << cg.getCode()[i];
-	}
+	// std::ofstream file(fname);
+
+	// for (int i = 0; i < cur_size; i++)
+	// {
+	// 	file << cg.getCode()[i];
+	// }
 
 	cur_size = 25;
 	cur_instrs.clear();
 
 	return block->entry;
+}
+
+void CPURecompiler::MarkBlockDirty(uint32_t address)
+{
+	for (int i = 0; i < blockCache.size(); i++)
+	{
+		auto& b = blockCache[i];
+		if (b->guest_addr <= address && (b->guest_addr + b->size) > address)
+		{
+			FreeBlock(blockCache[i]->Start);
+			delete blockCache[i];
+			blockCache.erase(blockCache.begin() + i);
+			break;
+		}
+	}
+}
+
+uint32_t CPURecompiler::GetPC()
+{
+	return g_state.pc;
 }
 
 bool CPURecompiler::ModifiesPC(uint32_t i)
@@ -696,7 +758,6 @@ void CPURecompiler::CheckCacheFull()
 {
 	if (blockCache.size() >= 32) // 32 blocks max
 	{
-		printf("Flushing block cache\n");
 		int leastUsed = -1;
 		int leastUsedAmount = INT32_MAX;
 		for (int i = 0; i < blockCache.size(); i++)
@@ -709,6 +770,9 @@ void CPURecompiler::CheckCacheFull()
 			}
 		}
 
+		if (leastUsed == -1)
+			return;
+
 		FreeBlock(blockCache[leastUsed]->Start);
 		delete blockCache[leastUsed];
 		blockCache.erase(blockCache.begin() + leastUsed);
@@ -718,6 +782,7 @@ void CPURecompiler::CheckCacheFull()
 bool CPURecompiler::EmitInstruction(uint32_t opcode)
 {
 	cur_instr.full = opcode;
+	instructions++;
 
 	cur_size += 30; // For the increment PC
 	cur_size += 15; // For the load delay handler
@@ -738,6 +803,7 @@ bool CPURecompiler::EmitInstruction(uint32_t opcode)
 				cur_size += 15;
 				break;
 			case SpecialInstructions::addu:
+			case SpecialInstructions::and_:
 			case SpecialInstructions::or_:
 				cur_size += 20;
 				break;
@@ -758,7 +824,7 @@ bool CPURecompiler::EmitInstruction(uint32_t opcode)
 			break;
 		case Instructions::beq:
 		case Instructions::bne:
-			cur_size += 27;
+			cur_size += 31;
 			break;
 		case Instructions::addiu:
 		case Instructions::addi: // Eventually we should maybe handle addi exceptions
@@ -771,6 +837,7 @@ bool CPURecompiler::EmitInstruction(uint32_t opcode)
 		{
 			switch (cur_instr.r_type.rs)
 			{
+			case Cop0Instructions::mfc0:
 			case Cop0Instructions::mtc0:
 				cur_size += 12;
 				break;

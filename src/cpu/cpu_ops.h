@@ -22,6 +22,7 @@ enum Instructions
 
 enum Cop0Instructions
 {
+	mfc0 = 0x00,
 	mtc0 = 0x04,
 };
 
@@ -29,6 +30,7 @@ enum SpecialInstructions
 {
 	jr = 0x08,
 	addu = 0x21,
+	and_ = 0x24,
 	or_ = 0x25,
 	sltiu = 0x2B,
 };

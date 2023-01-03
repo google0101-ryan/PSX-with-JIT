@@ -41,10 +41,12 @@ private:
 	// Special opcodes
 	void EmitJR(Xbyak::CodeGenerator& cg); // 0x08
 	void EmitADDU(Xbyak::CodeGenerator& cg); // 0x21
+	void EmitAnd(Xbyak::CodeGenerator& cg); // 0x24
 	void EmitOr(Xbyak::CodeGenerator& cg); // 0x25
 	void EmitSLTU(Xbyak::CodeGenerator& cg); // 0x2B
 
 	// Cop0 opcodes
+	void EmitMFC0(Xbyak::CodeGenerator& cg); // 0x00
 	void EmitMTC0(Xbyak::CodeGenerator& cg); // 0x04
 
 	typedef struct
@@ -53,9 +55,13 @@ private:
 		HostFunc entry;
 		uint32_t guest_addr;
 		size_t hits = 1; // Number of times this block has been used
+		bool dirty = false;
+		size_t size = 0;
 	} CodeBlock;
 
 	std::vector<CodeBlock*> blockCache;
+
+	int instructions = 0;
 
 	bool ModifiesPC(uint32_t i);
 	void CheckCacheFull();
@@ -65,4 +71,8 @@ public:
 
 	bool EmitInstruction(uint32_t opcode);
 	HostFunc CompileBlock();
+
+	void MarkBlockDirty(uint32_t address);
+
+	uint32_t GetPC();
 };

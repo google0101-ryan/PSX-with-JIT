@@ -1,0 +1,96 @@
+00000000  50                push rax
+00000001  53                push rbx
+00000002  51                push rcx
+00000003  52                push rdx
+00000004  57                push rdi
+00000005  56                push rsi
+00000006  55                push rbp
+00000007  48BDE001892AE655  mov rbp,0x55e62a8901e0
+         -0000
+00000011  488D8504010000    lea rax,[rbp+0x104]
+00000018  8B18              mov ebx,[rax]
+0000001A  488D8500010000    lea rax,[rbp+0x100]
+00000021  8918              mov [rax],ebx
+00000023  488D8504010000    lea rax,[rbp+0x104]
+0000002A  830004            add dword [rax],byte +0x4
+0000002D  488D450C          lea rax,[rbp+0xc]
+00000031  8B38              mov edi,[rax]
+00000033  83C700            add edi,byte +0x0
+00000036  48B8D0667E2AE655  mov rax,0x55e62a7e66d0
+         -0000
+00000040  FFD0              call rax
+00000042  4889C3            mov rbx,rax
+00000045  55                push rbp
+00000046  48BDC801812AE655  mov rbp,0x55e62a8101c8
+         -0000
+00000050  488D4500          lea rax,[rbp+0x0]
+00000054  C70018000000      mov dword [rax],0x18
+0000005A  488D4504          lea rax,[rbp+0x4]
+0000005E  8918              mov [rax],ebx
+00000060  5D                pop rbp
+00000061  48B8EB667E2AE655  mov rax,0x55e62a7e66eb
+         -0000
+0000006B  FFD0              call rax
+0000006D  488D8504010000    lea rax,[rbp+0x104]
+00000074  8B18              mov ebx,[rax]
+00000076  488D8500010000    lea rax,[rbp+0x100]
+0000007D  8918              mov [rax],ebx
+0000007F  488D8504010000    lea rax,[rbp+0x104]
+00000086  830004            add dword [rax],byte +0x4
+00000089  90                nop
+0000008A  48B8EB667E2AE655  mov rax,0x55e62a7e66eb
+         -0000
+00000094  FFD0              call rax
+00000096  488D8504010000    lea rax,[rbp+0x104]
+0000009D  8B18              mov ebx,[rax]
+0000009F  488D8500010000    lea rax,[rbp+0x100]
+000000A6  8918              mov [rax],ebx
+000000A8  488D8504010000    lea rax,[rbp+0x104]
+000000AF  830004            add dword [rax],byte +0x4
+000000B2  488D4560          lea rax,[rbp+0x60]
+000000B6  8B18              mov ebx,[rax]
+000000B8  488D4500          lea rax,[rbp+0x0]
+000000BC  8B08              mov ecx,[rax]
+000000BE  39D9              cmp ecx,ebx
+000000C0  740E              jz 0xd0
+000000C2  488D8500010000    lea rax,[rbp+0x100]
+000000C9  8B18              mov ebx,[rax]
+000000CB  83C310            add ebx,byte +0x10
+000000CE  8918              mov [rax],ebx
+000000D0  48B8EB667E2AE655  mov rax,0x55e62a7e66eb
+         -0000
+000000DA  FFD0              call rax
+000000DC  488D8504010000    lea rax,[rbp+0x104]
+000000E3  8B18              mov ebx,[rax]
+000000E5  488D8500010000    lea rax,[rbp+0x100]
+000000EC  8918              mov [rax],ebx
+000000EE  488D8504010000    lea rax,[rbp+0x104]
+000000F5  830004            add dword [rax],byte +0x4
+000000F8  488D4500          lea rax,[rbp+0x0]
+000000FC  8B18              mov ebx,[rax]
+000000FE  488D4500          lea rax,[rbp+0x0]
+00000102  8B08              mov ecx,[rax]
+00000104  01CB              add ebx,ecx
+00000106  488D4508          lea rax,[rbp+0x8]
+0000010A  8918              mov [rax],ebx
+0000010C  48B8EB667E2AE655  mov rax,0x55e62a7e66eb
+         -0000
+00000116  FFD0              call rax
+00000118  5D                pop rbp
+00000119  5E                pop rsi
+0000011A  5F                pop rdi
+0000011B  5A                pop rdx
+0000011C  59                pop rcx
+0000011D  5B                pop rbx
+0000011E  58                pop rax
+0000011F  C3                ret
+00000120  0000              add [rax],al
+00000122  0000              add [rax],al
+00000124  0000              add [rax],al
+00000126  0000              add [rax],al
+00000128  0000              add [rax],al
+0000012A  0000              add [rax],al
+0000012C  0000              add [rax],al
+0000012E  0000              add [rax],al
+00000130  0000              add [rax],al
+00000132  0000              add [rax],al

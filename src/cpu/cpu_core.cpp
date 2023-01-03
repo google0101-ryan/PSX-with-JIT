@@ -1,5 +1,6 @@
 #include "cpu_core.h"
 #include <cstring>
+#include <fstream>
 
 CPUState g_state;
 
@@ -10,6 +11,15 @@ void Dump()
 	printf("pc\t->\t0x%08x\n", g_state.pc);
 	printf("next_pc\t->\t0x%08x\n", g_state.next_pc);
 	printf("IsC: %d\n", ((g_state.cop0[12] >> 16) & 1) == 1);
+
+	std::ofstream ram("ram.dump");
+
+	for (int i = 0; i < 0x200000; i++)
+	{
+		ram << Bus::Read8(i);
+	}
+
+	ram.close();
 }
 
 CPU::CPU()

@@ -106,7 +106,6 @@ inline LoadDelaySlot load_delay_slot, next_load_delay;
 
 static void HandleLoadDelay()
 {
-	printf("%d 0x%08x\n", load_delay_slot.reg, load_delay_slot.data);
 	g_state.regs[load_delay_slot.reg] = load_delay_slot.data;
 	load_delay_slot = next_load_delay;
 	next_load_delay.reg = 0;

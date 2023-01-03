@@ -3,11 +3,15 @@
 #include <cstdint>
 #include <string>
 #include <util/log.h>
+#include <cpu/cpu_core.h>
+#include <cpu/cpu_recomp_core.h>
 
 #define MODULE "Bus"
 
 namespace Bus
 {
+	inline CPURecompiler* recomp;
+
 	inline uint8_t ram[0x200000];
 	inline uint8_t bios[0x80000];
 
@@ -31,7 +35,7 @@ namespace Bus
 		if (addr < 0x00200000)
 			return *(T*)&ram[addr];
 		if (addr >= 0x1f000000 && addr < 0x1f080000)
-			return 0;
+			return 0xff;
 		if (addr >= 0x1fc00000 && addr < 0x1fc80000)
 			return *(T*)&bios[addr - 0x1fc00000];
 
@@ -42,6 +46,13 @@ namespace Bus
 	void write(uint32_t addr, T data)
 	{
 		addr = mask_region(addr);
+
+		recomp->MarkBlockDirty(addr);
+
+		if (addr == 0xC0)
+		{
+			printf("Writing 0x%08x to 0x%08x (0x%08x)\n", data, addr, recomp->GetPC());
+		}
 
 		if (addr < 0x00200000)
 		{
